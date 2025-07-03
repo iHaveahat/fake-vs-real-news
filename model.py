@@ -1,8 +1,6 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
-from torchvision import datasets
-from torchvision.transforms import ToTensor
 from transformers import AutoTokenizer
 import pandas as pd
 
@@ -10,9 +8,7 @@ class WELFake(Dataset):
     def __init__(self, tokenizer, split='train', train_ratio=0.8):
         self.data = pd.read_csv('welfake.csv')
         self.data = self.data.iloc[:, 2:]
-        self.tokenizer = tokenizer # AutoTokenizer.from_pretrained('bert-base-cased')
-        
-        # Split the data
+        self.tokenizer = tokenizer 
         train_size = int(len(self.data) * train_ratio)
         if split == 'train':
             self.data = self.data.iloc[:train_size]
@@ -39,37 +35,13 @@ class WELFake(Dataset):
         
         sample = {
             'data': tokenized['input_ids'].squeeze(),
-            # 'attention_mask': tokenized['attention_mask'].squeeze(), 
             'target': torch.tensor(label, dtype=torch.long)
         }
         return sample
 
-        # if self.transform:
-        #     sample = self.transform(sample)
-
-        # img_name = os.path.join(self.root_dir,
-        #                         self.landmarks_frame.iloc[idx, 0])
-        # image = io.imread(img_name)
-        # landmarks = self.landmarks_frame.iloc[idx, 1:]
-        # landmarks = np.array([landmarks], dtype=float).reshape(-1, 2)
-        # sample = {'image': image, 'landmarks': landmarks}
-
 tokenizer = AutoTokenizer.from_pretrained('bert-base-cased')
 training_data = WELFake(tokenizer)
 test_data = WELFake(tokenizer, split='test')
-# training_data = datasets.MNIST(
-#     root="data",
-#     train=True,
-#     download=True,
-#     transform=ToTensor()
-# )
-
-# test_data = datasets.MNIST(
-#     root="data",
-#     train=False,
-#     download=True,
-#     transform=ToTensor()
-# )
 
 class NeuralNetwork(nn.Module):
     def __init__(self, vocab_size=28996):  # BERT's vocab size
@@ -93,9 +65,8 @@ class NeuralNetwork(nn.Module):
 model = NeuralNetwork()
 train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
 test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
-learning_rate = 1e-3
-batch_size = 64
-epochs = 10
+learning_rate = 1e-1
+epochs = 2
 loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
@@ -135,5 +106,4 @@ def test_loop(dataloader, loss_fn):
 
 train_loop(train_dataloader, epochs, loss_fn, optimizer)
 test_loop(test_dataloader, loss_fn)
-            
-
+# torch.save(model.state_dict(), 'model_weights.pth')
